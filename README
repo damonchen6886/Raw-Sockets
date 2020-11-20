@@ -30,7 +30,8 @@ the FIN flag as 1.
 - After the procedure, the data stored in the map/dictionary is written to a file having the same name as the path.
 If the URL ends with a '/' or there is no path name then the packets are written to index.html.
 - In the case of a non-200 status code, an error is printed to the console and we close the program.
-- We compared the downloaded files with the original ones using 'diff' and 'md5sum' command.
+- We compared the downloaded files with the original ones using 'diff' and 'md5sum' command. The file such as
+"2MB.log.1" is the original file.
 - We stress tested our script with 3 files the instructor gave us. One of them is a 50 MB file and it took longer than
 other files to write to the directory. Please be patient and eventually it will work.
 - For more project details, please refer to https://david.choffnes.com/classes/cs4700fa20/project4.php
