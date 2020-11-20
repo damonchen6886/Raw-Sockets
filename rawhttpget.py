@@ -7,6 +7,9 @@ from urllib.parse import urlparse
 import time
 from struct import pack, unpack
 
+# set flag value
+FIN_ACK = 17
+FIN_ACK_PSH =25
 
 class RawHttpGet():
     
@@ -100,42 +103,7 @@ class RawHttpGet():
         s = ~s & 0xffff
         return s
 
-    # # unpack packet
-    # def unpacket(self, packet):
-    #     # reverse method of pack('!BBHHHBBH4s4s' , ip_ihl_ver, ip_tos, ip_tot_len, ip_id, ip_frag_off, ip_ttl, ip_proto, ip_check, ip_saddr, ip_daddr)
-    #     ip_header_keys = ['ihl_ver', 'ip_tos', 'tot_len', 'ip_id', 'frag_off', 'ip_ttl', 'ip_proto', 'ip_check', 'ip_source', 'ip_dest']
-    #     ip_header_values = unpack('!BBHHHBB', packet[0:10]) + unpack('H', packet[10:12]) + unpack('!4s4s', packet[12:20])
-    #     ip_headers = dict(zip(ip_header_keys, ip_header_values))
-    #     version = ip_headers['ihl_ver'] >> 4
-    #     if 4 != version:
-    #         print("not ipv 4")
-    #         raise ValueError("not IPv4")
-    #     ip_header_length = ip_headers['ihl_ver']  & 0xF
-    
-    #     # if it is the dest matched
-    #     if ip_headers['ip_dest'] != socket.inet_ntoa(self.src_ip):
-    #         print("Invalid destination adderss")
-    #         print(ip_headers['ip_dest'], self.src_ip)
-    #         raise ValueError("invalid destination IP address")
 
-    #     # if it is tcp
-    #     if ip_headers['proto'] != 0x06:
-    #         print('not tcp packet')
-    #         raise ValueError("Not TCP packet")
-    #     data = packet[4 * ip_header_length:]
-        
-    #     if ip_checkSum(ip_header_values):
-    #         return ip_headers, data
-    #     else :
-    #         print('ip checksum failed')
-    #         raise ValueError("invalid IP checksum")
-        
-    def ip_checkSum(self,values):
-        checkSum = values[7]
-        header = pack('!BBHHHBBH4s4s', values[0], values[1], values[2], values[3], values[4],values[5], values[6], 0, values[8], values[9])
-        ip_checkSum = self.checksum(header)
-        return checkSum == ip_checkSum
-    
     def get_localhost_ip(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         ip = ''
@@ -180,12 +148,7 @@ class RawHttpGet():
         http_response = b''
         for key in sorted(dic):
             http_response = http_response + dic[key]
-        # # filter the data with regrex
-        # filtered_obj = re.search(self.valid_HTTP, http_response.decode(), re.I)  # re.I ignore case
-        # if not filtered_obj:
-        #     print("Error: Bad Http Response")
-        #     sys.exit()
-        # else:
+
         file = open(path, "wb")
 
         content = http_response.split(b'\r\n\r\n',1)
@@ -195,18 +158,7 @@ class RawHttpGet():
         else:
             file.write(content[0])
         
-        # for seq in sorted_sequence:
-        #     if counter == 0:
-        #         # handle the file header
-        #         data = dic[seq]
-        #         print ("data")
-        #         print(type(data))
-        #         content = data.split(b'\r\n\r\n',1)
-        #         print(type(content[1]))
-        #         file.writelines(content[1])
-        #         counter += 1
-        #     else:
-        #         file.writelines(dic[seq])
+
 
                     
     ## basic function (generate_syn)
@@ -250,19 +202,19 @@ class RawHttpGet():
             unpack_ip_header = unpack('!BBHHHBBH4s4s' , ip_header)
             # ipv version
             version_ihl = unpack_ip_header[0]
-            version = version_ihl >> 4
+            # version = version_ihl >> 4
             temp = (version_ihl & 0xF)
             ip_header_length = temp * 4
-            ttl = unpack_ip_header[5]
-            protocol = unpack_ip_header[6]
+            # ttl = unpack_ip_header[5]
+            # protocol = unpack_ip_header[6]
             src_addr = socket.inet_ntoa(unpack_ip_header[8])
             dest_addr = socket.inet_ntoa(unpack_ip_header[9])
             # second 20 character is tcp-header
             tcp_header = received_packet[ip_header_length:ip_header_length+20]
             unpack_tcp_header = unpack('!HHLLBBHHH' , tcp_header)
             
-            dest_port = unpack_tcp_header[1]
-            seq_number = unpack_tcp_header[2]
+            # dest_port = unpack_tcp_header[1]
+            # seq_number = unpack_tcp_header[2]
             doff_reserved = unpack_tcp_header[4]
             tcp_temp = doff_reserved >> 4
             tcp_header_length = tcp_temp * 4 # slightly change
@@ -270,9 +222,9 @@ class RawHttpGet():
             # calculate the total header length
             header_size = ip_header_length + tcp_header_length
             # remaining is content
-            data_size = len(received_packet) - header_size
+            # data_size = len(received_packet) - header_size
             # truncate for data
-            data = received_packet[header_size:]
+            # data = received_packet[header_size:]
             
             if src_addr == dest_ip and dest_addr == src_ip and unpack_tcp_header[5] == 18 and src_port == unpack_tcp_header[1] and ((time.time() - self.start_time) < 60):
                 self.send_ack(send_sock, src_port, src_ip, dest_ip, unpack_tcp_header)
@@ -288,7 +240,7 @@ class RawHttpGet():
         http_request = ''
         ip_header = self.getIpHeader(54323)
         # tcp-header
-        tcp_source = src_port
+        # tcp_source = src_port
         tcp_seq = tcp_header[3]
         tcp_ack_seq = tcp_header[2] + 1
         flag = 'PSH-ACK'
@@ -333,12 +285,12 @@ class RawHttpGet():
             unpack_ip_header = unpack('!BBHHHBBH4s4s' , ip_header)
             # ipv version
             version_ihl = unpack_ip_header[0]
-            version = version_ihl >> 4
+            # version = version_ihl >> 4
             ip_header_length = (version_ihl & 0xF) * 4
-            ttl = unpack_ip_header[5]
-            protocol = unpack_ip_header[6]
+            # ttl = unpack_ip_header[5]
+            # protocol = unpack_ip_header[6]
             src_addr = socket.inet_ntoa(unpack_ip_header[8])
-            dest_addr = socket.inet_ntoa(unpack_ip_header[9])
+            # dest_addr = socket.inet_ntoa(unpack_ip_header[9])
             # second 20 character is tcp-header
             tcp_header = received_packet[ip_header_length:ip_header_length+20]
             unpack_tcp_header = unpack('!HHLLBBHHH' , tcp_header)
@@ -381,7 +333,7 @@ class RawHttpGet():
                 send_sock.sendto(teardown_initiator, (dest_ip, 0))
           
             # if flag = "FIN_ACK" or "FIN_ACK_PSH", should return disconnection request
-            if (flags == 17 or flags == 25) and dest_port == src_port and src_addr == dest_ip and data_size == 0:
+            if (flags == FIN_ACK or flags == FIN_ACK_PSH) and dest_port == src_port and src_addr == dest_ip and data_size == 0:
                 # disconnect with the server (download completed)
                 fin_packet = ""
                 ip_header_4ack = self.getIpHeader(54322)
