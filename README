@@ -1,0 +1,40 @@
+CS-5700-Project-4
+========================================================================================================================
+Team: gusong
+Members: Chen Gu, Jiahao Song
+Chen worked on building TCP and IP headers, getting TCP flags as well as the checksum and establishing 3-way handshakes.
+Jiahao worked on sending packets, modifying file name as well as sending GET request to download the file.
+========================================================================================================================
+Our goal is to write a program called rawhttpget that takes one command line parameter (a URL), downloads the associated
+web page or file, and saves it to the current directory. The program needs to be given permission using
+chmod 777 rawhttpget
+and run it as a root user. For example, using
+sudo ./rawhttpget http://david.choffnes.com/classes/cs4700fa20/project4.php
+========================================================================================================================
+- how to run our scripts in command line:
+'./rawhttpget [URL]'
+e.g.
+'./rawhttpget http://david.choffnes.com/classes/cs4700fa20/project4.php'
+- Modifying ip tables(We have covered this in our bash file)
+'iptables -A OUTPUT -p tcp --tcp-flags RST RST -j DROP'
+- The URL is parsed to obtain the path and destination filename.
+- We got our local ip address by pinging Google.
+- We use SOCK_RAW/IPPROTO_RAW to send the pakcets, and SOCK_RAW/IPPROTO_TCP to recieve the packets.
+- After the sockets are created we built TCP and IP headers. The SYN flag in tcp header set to 1.
+- Start the 3-way handshake and establish connection between the client and the server.
+- Send GET request which parses the URL from the command line as an arguement.
+- The server then sends back ACK and we store the data in a map.
+- We monitored the congestion window and modified it.
+- We keep receiving data from the server until the server sends a FIN,ACK packet. We(Client) sends back an ACK and set
+the FIN flag as 1.
+- After the procedure, the data stored in the map/dictionary is written to a file having the same name as the path.
+If the URL ends with a '/' or there is no path name then the packets are written to index.html.
+- In the case of a non-200 status code, an error is printed to the console and we close the program.
+- We compared the downloaded files with the original ones using 'diff' and 'md5sum' command.
+- We stress tested our script with 3 files the instructor gave us. One of them is a 50 MB file and it took longer than
+other files to write to the directory. Please be patient and eventually it will work.
+- For more project details, please refer to https://david.choffnes.com/classes/cs4700fa20/project4.php
+========================================================================================================================
+- We had difficulties packing and unpacking TCP/IP headers as well as parsing the data into our written files. We used
+Wireshark to monitor TCP activities.
+
