@@ -94,6 +94,6 @@ and
 #    urg   |   ack   |   psh    |   rst   |    syn    |  fin    |
 #               1          1          0          0         1     =  16+8+1 =25
 - We had difficulties packing and unpacking TCP/IP headers as well as parsing the data into our written files.
-- We used Wireshark to monitor TCP activities and ran into several problems such as "Tcp Port Numbers Reused" and
+- We used Wireshark to monitor TCP activities and ran into several problems such as "TCP Port Numbers Reused" and
 "TCP Retransmission". We managed to solve most of them and our files downloaded using our script remain intact.
 
