@@ -11,9 +11,10 @@ from struct import pack, unpack
 # set flag value
 #    urg   |   ack   |   psh    |   rst   |    syn    |  fin    |
 #               1          0          0          0         1     =  16+1 = 17
-FIN_ACK = 17
+
 #    urg   |   ack   |   psh    |   rst   |    syn    |  fin    |
 #               1          1          0          0         1     =  16+8+1 =25
+FIN_ACK = 17
 FIN_ACK_PSH = 25
 TIME_OUT =60
 MAX_CWND = 1000
@@ -38,13 +39,13 @@ class RawHttpGet:
         self.src_port = 0
 
     # Ip header
-    def getIpHeader(self, packet_id=54321):
+    def getIpHeader(self, id=54321):
         # ip header fields
         ip_ihl = 5
         ip_ver = 4
         ip_tos = 0
         ip_tot_len = 0  # kernel will fill the correct total length
-        ip_id = packet_id  # Id of this packet
+        ip_id = id  # Id of this packet
         ip_frag_off = 0
         ip_ttl = 255
         ip_proto = socket.IPPROTO_TCP
@@ -164,7 +165,7 @@ class RawHttpGet:
 
     def send_ack(self, send_socket, src_port,  dest_ip, tcp_headers):
 
-        ip_header = self.getIpHeader(54322)
+        ip_header = self.getIpHeader(54321)
 
         # tcp header fields
         tcp_source_port = src_port
@@ -208,7 +209,7 @@ class RawHttpGet:
     # http get for file request
     def http_request(self, send_sock, dest_ip,  tcp_header, path, hostname):
 
-        ip_header = self.getIpHeader(54323)
+        ip_header = self.getIpHeader(54321)
 
         tcp_seq = tcp_header[3]
         tcp_ack_seq = tcp_header[2] + 1
@@ -253,9 +254,9 @@ class RawHttpGet:
         content = http_response.split(b'\r\n\r\n', 1)
 
         http_header = content[0]
-        # str_header = http_header.decode()
         # print(http_header)
-
+        # print(http_header.decode())
+        # print(type(http_header.decode()))
         # if http response code is not 200: exit the program
         if VAIID_HTTP not in http_header.decode().upper():
             print("HTTP response not 200")
@@ -319,7 +320,7 @@ class RawHttpGet:
                 map[seq_num] = data
                 # teardown initiation
                 teardown_initiator = ""
-                ip_header_4ack = self.getIpHeader(54322)
+                ip_header_4ack = self.getIpHeader(54321)
                 tcp_source = src_port
                 self.src_port = tcp_source
                 tcp_seq = unpack_tcp_header[3]
@@ -336,7 +337,7 @@ class RawHttpGet:
                 # disconnect with the server (download completed)
                 #init fin_packet
                 fin_packet = ""
-                ip_header_4ack = self.getIpHeader(54322)
+                ip_header_4ack = self.getIpHeader(54321)
                 tcp_source = src_port
                 self.src_port = tcp_source
                 tcp_seq = unpack_tcp_header[3]
