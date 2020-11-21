@@ -319,17 +319,17 @@ class RawHttpGet:
                     self.cwnd += 1
                 map[seq_num] = data
                 # teardown initiation
-                teardown_initiator = ""
+                teardown = ""
                 ip_header_4ack = self.getIpHeader(54321)
                 tcp_source = src_port
                 self.src_port = tcp_source
                 tcp_seq = unpack_tcp_header[3]
                 tcp_ack_seq = seq_num + data_size
                 flag = "ACK"
-                data_for_teardown = ""
-                tcp_header4ack = self.getTcpHeader(tcp_seq, tcp_ack_seq, data_for_teardown, flag)
-                teardown_initiator = ip_header_4ack + tcp_header4ack + data_for_teardown.encode('utf-8')
-                send_sock.sendto(teardown_initiator, (dest_ip, 0))
+                teardown_data= ""
+                tcp_header4ack = self.getTcpHeader(tcp_seq, tcp_ack_seq, teardown_data, flag)
+                teardown = ip_header_4ack + tcp_header4ack + teardown_data.encode('utf-8')
+                send_sock.sendto(teardown, (dest_ip, 0))
 
 
             # if flag = "FIN_ACK" or "FIN_ACK_PSH", should return disconnection request
