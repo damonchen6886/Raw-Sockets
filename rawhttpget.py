@@ -16,7 +16,8 @@ FIN_ACK = 17
 #               1          1          0          0         1     =  16+8+1 =25
 FIN_ACK_PSH = 25
 TIME_OUT =60
-
+MAX_CWND = 1000
+VAIID_HTTP = "200 OK"
 class RawHttpGet:
 
     # constructor
@@ -29,6 +30,8 @@ class RawHttpGet:
         self.dest_port = 80
         self.congestionWindow = 1
         self.buffer_size = 65535
+        # congestion window
+        self.cwnd = 1
 
     def reset(self):
         self.dest_port = 0
@@ -143,21 +146,6 @@ class RawHttpGet:
         tcp_flags = tcp_fin + (tcp_syn << 1) + (tcp_rst << 2) + (tcp_psh << 3) + (tcp_ack << 4) + (tcp_urg << 5)
         return tcp_flags
 
-    # write to file
-    def to_file(self, path, dic):
-        # get the packet-data by mapping sorted key
-        http_response = b''
-        for key in sorted(dic):
-            http_response = http_response + dic[key]
-
-        file = open(path, "wb")
-
-        content = http_response.split(b'\r\n\r\n', 1)
-        # print(type(content[1]))
-        if (len(content) > 1):
-            file.write(content[1])
-        else:
-            file.write(content[0])
 
     # first step of three-handshack
     def first_handshake(self, send_socket,  dest_ip):
@@ -209,9 +197,11 @@ class RawHttpGet:
                 unpack_tcp_header[1] and ((time.time() - self.start_time) < TIME_OUT):
             self.send_ack(send_sock, src_port,  dest_ip, unpack_tcp_header)
 
+
         else:
             # if out of time, resend the request
-            self.first_handshake(send_sock, dest_ip )
+            self.cwnd += 1
+            self.first_handshake(send_sock, dest_ip)
 
         return unpack_tcp_header, unpack_ip_header[4]
 
@@ -250,7 +240,32 @@ class RawHttpGet:
                 file_path = split_name[1]
         return file_path, path_url
 
-    def download_file(self, send_sock, recv_sock, buffer_size, dest_ip, src_port, path):
+
+    # write to file
+    def to_file(self, path, dic):
+        # get the packet-data by mapping sorted key
+        http_response = b''
+        for key in sorted(dic):
+            http_response = http_response + dic[key]
+
+        file = open(path, "wb")
+
+        content = http_response.split(b'\r\n\r\n', 1)
+
+        http_header = content[0]
+        # str_header = http_header.decode()
+        # print(http_header)
+
+        # if http response code is not 200: exit the program
+        if VAIID_HTTP not in http_header.decode().upper():
+            print("HTTP response not 200")
+            sys.exit()
+        if len(content) > 1:
+            file.write(content[1])
+        else:
+            file.write(content[0])
+
+    def receive_data_to_file(self, send_sock, recv_sock, buffer_size, dest_ip, src_port, path):
         # map key: sequencenumber int value: data byte
         # save all the packet data to a dictionary, each pair represent a packet received from server
         map = {}
@@ -258,6 +273,7 @@ class RawHttpGet:
         while True:
             # print("map")
             # print(map)
+            start_time = time.process_time()
             packet = recv_sock.recvfrom(buffer_size)
             received_packet = packet[0]
             # first 20 character is ip-header
@@ -294,6 +310,12 @@ class RawHttpGet:
             if dest_port == src_port and src_addr == dest_ip and data_size > 0:
                 count = count + 1
                 data = received_packet[header_size:]
+                cur_time = time.process_time()
+                # handle the congestion window
+                if cur_time -start_time < TIME_OUT or self.cwnd == MAX_CWND:
+                    self.cwnd = 1
+                else:
+                    self.cwnd += 1
                 map[seq_num] = data
                 # teardown initiation
                 teardown_initiator = ""
@@ -307,6 +329,7 @@ class RawHttpGet:
                 tcp_header4ack = self.getTcpHeader(tcp_seq, tcp_ack_seq, data_for_teardown, flag)
                 teardown_initiator = ip_header_4ack + tcp_header4ack + data_for_teardown.encode('utf-8')
                 send_sock.sendto(teardown_initiator, (dest_ip, 0))
+
 
             # if flag = "FIN_ACK" or "FIN_ACK_PSH", should return disconnection request
             if (flags == FIN_ACK or flags == FIN_ACK_PSH) and dest_port == src_port and src_addr == dest_ip and data_size == 0:
@@ -338,7 +361,7 @@ class RawHttpGet:
         hostname = split_url.netloc
         self.src_ip = self.get_localhost_ip()
         self.dest_ip = socket.gethostbyname(urlparse(url_parameter).hostname)
-        fp, path_url = self.get_filename(split_url)
+        file_path, path_url = self.get_filename(split_url)
         # create raw socket
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
@@ -361,7 +384,7 @@ class RawHttpGet:
                 break
         #print(str(tcp_header) + "tcp----------" + str(off_set))
         self.http_request(self.sock, self.dest_ip, tcp_header, path_url, hostname)
-        self.download_file(self.sock, self.recv_socket, self.buffer_size, self.dest_ip, self.src_port, fp)
+        self.receive_data_to_file(self.sock, self.recv_socket, self.buffer_size, self.dest_ip, self.src_port, file_path)
 
         self.sock.close()
         self.recv_socket.close()
