@@ -83,6 +83,17 @@ High-Level Requirements:
 other files to write to the directory. Please be patient and eventually it will work.
 - For more project details, please refer to https://david.choffnes.com/classes/cs4700fa20/project4.php
 ========================================================================================================================
-- We had difficulties packing and unpacking TCP/IP headers as well as parsing the data into our written files. We used
-Wireshark to monitor TCP activities.
+Challenges:
+- The information from the tutorial is limited. We spent a lot of time familiarizing ourselves with TCP and IP headers,
+including every single flag field. For example, we declared two global variables in our code: FIN_ACK = 17 and
+FIN_ACK_PSH = 25. These two numbers are a indication of TCP teardown because we need to perform binary to decimal
+calculations here:
+#    urg   |   ack   |   psh    |   rst   |    syn    |  fin    |
+#               1          0          0          0         1     =  16+1 = 17
+and
+#    urg   |   ack   |   psh    |   rst   |    syn    |  fin    |
+#               1          1          0          0         1     =  16+8+1 =25
+- We had difficulties packing and unpacking TCP/IP headers as well as parsing the data into our written files.
+- We used Wireshark to monitor TCP activities and ran into several problems such as "Tcp Port Numbers Reused" and
+"TCP Retransmission". We managed to solve most of them and our files downloaded using our script remain intact.
 
