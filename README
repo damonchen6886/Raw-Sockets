@@ -2,8 +2,11 @@ CS-5700-Project-4
 ========================================================================================================================
 Team: gusong
 Members: Chen Gu, Jiahao Song
-Chen worked on building TCP and IP headers, getting TCP flags as well as the checksum and establishing 3-way handshakes.
-Jiahao worked on sending packets, modifying file name as well as sending GET request to download the file.
+Chen's work mainly focused on building TCP and IP headers, getting TCP flags as well as realizing TCP checksum and
+establishing 3-way handshakes. Jiahao's work mainly focused on sending packets, modifying file name as well as sending
+GET request to download the file. We did a lot of research on the tutorial the instructor gave us,
+https://www.binarytides.com/raw-sockets-c-code-linux/ from Silver Moon.
+We worked as pilot and copilot and switch.
 ========================================================================================================================
 Our goal is to write a program called rawhttpget that takes one command line parameter (a URL), downloads the associated
 web page or file, and saves it to the current directory. The program needs to be given permission using
