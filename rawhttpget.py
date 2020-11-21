@@ -15,7 +15,7 @@ FIN_ACK = 17
 #    urg   |   ack   |   psh    |   rst   |    syn    |  fin    |
 #               1          1          0          0         1     =  16+8+1 =25
 FIN_ACK_PSH = 25
-
+TIME_OUT =60
 
 class RawHttpGet:
 
@@ -159,9 +159,8 @@ class RawHttpGet:
         else:
             file.write(content[0])
 
-    ## basic function (generate_syn)
     # first step of three-handshack
-    def first_handshake(self, send_socket, src_ip, dest_ip, src_port):
+    def first_handshake(self, send_socket,  dest_ip):
         # track the packet utility time
         self.start_time = time.time()
         # init a packet
@@ -175,7 +174,7 @@ class RawHttpGet:
         # send the syn packet
         send_socket.sendto(headers, (dest_ip, 0))
 
-    def send_ack(self, send_socket, src_port, src_ip, dest_ip, tcp_headers):
+    def send_ack(self, send_socket, src_port,  dest_ip, tcp_headers):
 
         ip_header = self.getIpHeader(54322)
 
@@ -207,17 +206,17 @@ class RawHttpGet:
         unpack_tcp_header = unpack('!HHLLBBHHH', tcp_header)
 
         if src_addr == dest_ip and dest_addr == src_ip and unpack_tcp_header[5] == 18 and src_port == \
-                unpack_tcp_header[1] and ((time.time() - self.start_time) < 60):
-            self.send_ack(send_sock, src_port, src_ip, dest_ip, unpack_tcp_header)
+                unpack_tcp_header[1] and ((time.time() - self.start_time) < TIME_OUT):
+            self.send_ack(send_sock, src_port,  dest_ip, unpack_tcp_header)
 
         else:
             # if out of time, resend the request
-            self.first_handshake(send_sock, src_ip, dest_ip, src_port)
+            self.first_handshake(send_sock, dest_ip )
 
         return unpack_tcp_header, unpack_ip_header[4]
 
     # http get for file request
-    def http_request(self, send_sock, src_ip, dest_ip, src_port, tcp_header, path, hostname):
+    def http_request(self, send_sock, dest_ip,  tcp_header, path, hostname):
 
         ip_header = self.getIpHeader(54323)
 
@@ -228,8 +227,8 @@ class RawHttpGet:
         if len(request_httpdata) % 2 != 0:
             request_httpdata = request_httpdata + " "
         tcp_header4ack = self.getTcpHeader(tcp_seq, tcp_ack_seq, request_httpdata, flag)
-        http_request = ip_header + tcp_header4ack + request_httpdata.encode('utf-8')
-        send_sock.sendto(http_request, (dest_ip, 0))
+        http_req = ip_header + tcp_header4ack + request_httpdata.encode('utf-8')
+        send_sock.sendto(http_req, (dest_ip, 0))
 
     # handle the url parsing issue
     def get_filename(self, url):
@@ -251,8 +250,9 @@ class RawHttpGet:
                 file_path = split_name[1]
         return file_path, path_url
 
-    def download_file(self, send_sock, recv_sock, buffer_size, src_ip, dest_ip, src_port, path):
-        # map key: int value: byte
+    def download_file(self, send_sock, recv_sock, buffer_size, dest_ip, src_port, path):
+        # map key: sequencenumber int value: data byte
+        # save all the packet data to a dictionary, each pair represent a packet received from server
         map = {}
         count = 0
         while True:
@@ -276,7 +276,7 @@ class RawHttpGet:
             dest_port = unpack_tcp_header[1]
             seq_num = unpack_tcp_header[2]
             doff_reserved = unpack_tcp_header[4]
-            tcp_header_length = ((doff_reserved >> 4) * 4)  
+            tcp_header_length = ((doff_reserved >> 4) * 4)
             flags = unpack_tcp_header[5]
 
             # calculate the total header length
@@ -354,14 +354,14 @@ class RawHttpGet:
             sys.exit()
         # initiate 3 way handshake
         while True:
-            self.first_handshake(self.sock, self.src_ip, self.dest_ip, self.src_port)
+            self.first_handshake(self.sock,  self.dest_ip)
             tcp_header, off_set = self.sec_third_handshake(self.sock, self.recv_socket, self.buffer_size, self.src_ip,
                                                            self.dest_ip, self.src_port)
             if str(off_set) == "0":
                 break
         #print(str(tcp_header) + "tcp----------" + str(off_set))
-        self.http_request(self.sock, self.src_ip, self.dest_ip, self.src_port, tcp_header, path_url, hostname)
-        self.download_file(self.sock, self.recv_socket, self.buffer_size, self.src_ip, self.dest_ip, self.src_port, fp)
+        self.http_request(self.sock, self.dest_ip, tcp_header, path_url, hostname)
+        self.download_file(self.sock, self.recv_socket, self.buffer_size, self.dest_ip, self.src_port, fp)
 
         self.sock.close()
         self.recv_socket.close()
