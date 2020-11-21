@@ -15,7 +15,7 @@ sudo ./rawhttpget http://david.choffnes.com/classes/cs4700fa20/project4.php
 './rawhttpget [URL]'
 e.g.
 './rawhttpget http://david.choffnes.com/classes/cs4700fa20/project4.php'
-- Modifying ip tables(We have covered this in our bash file)
+- Modifying ip tables(We have covered this in our .py file)
 'iptables -A OUTPUT -p tcp --tcp-flags RST RST -j DROP'
 - The URL is parsed to obtain the path and destination filename.
 - We got our local ip address by pinging Google.
